@@ -1,0 +1,82 @@
+
+ext {
+    // version.cfg controls over the version
+    configVersionName = "1.0.0"
+    configVersionCode = 100
+    main_version = 1
+    sub_version1 = 0
+    sub_version2 = 0
+}
+
+readVersionCfg()
+
+// version manage
+def readVersionCfg() {
+    println ":readVersionCfg"
+    // gradle property "versionCfgBaseDir" configured outside, def is `project.rootDir`
+    def baseDir = getProperties().get("versionCfgBaseDir", project.rootDir)
+    def configParams = new File(baseDir, 'version.cfg')
+    def index = 0
+    def configStr = ""
+    configParams.each {
+        if (index == 0) {
+            println " ignore modify dates"
+        } else {
+            configStr += it
+            configStr += "\n"
+        }
+        index = index + 1
+    }
+    println configStr
+
+    def versionConfig = new ConfigSlurper().parse(configStr)
+
+    main_version = versionConfig.main_version
+    sub_version1 = versionConfig.sub_version1
+    sub_version2 = versionConfig.sub_version2
+    configVersionName = versionConfig.version_name
+    configVersionCode = versionConfig.version_code
+    println " current version: $configVersionName ($configVersionCode)"
+}
+
+def updateCfgVersion() {
+    println ":updateCfgVersion"
+    println " update version.cfg"
+    def now = new Date().format("yyyy-MM-dd HH:mm:ss a");
+    //def baseDir = project.projectDir
+    def baseDir = versionCfgBaseDir
+    def file = new File(baseDir, 'version.cfg')
+    if (file.exists()) {
+        file.delete()
+    }
+    new File(baseDir, 'version.cfg').withWriter('utf-8') { writer ->
+        writer.writeLine now
+        writer.writeLine "main_version=${main_version}"
+        writer.writeLine "sub_version1=${sub_version1}"
+        writer.writeLine "sub_version2=${sub_version2}"
+        writer.writeLine "version_name=\"${configVersionName}\""
+        writer.writeLine "version_code=${configVersionCode}"
+    }
+}
+
+def increaseVersion() {
+    println ":increaseVersion"
+    readVersionCfg()
+    configVersionCode++
+
+    int tmp = configVersionCode
+    main_version = (int) Math.floor(tmp/100)
+    tmp = tmp - main_version * 100
+    sub_version1 = (int) Math.floor(tmp/10)
+    tmp = tmp - sub_version1 * 10
+    sub_version2 = (int) Math.floor(tmp)
+
+    configVersionName = main_version + "." + sub_version1 + "." + sub_version2;
+    println " increase version to $configVersionName ($configVersionCode)"
+    updateCfgVersion()
+}
+
+task increaseVersionTask << {
+    println ":increaseVersionTask"
+    increaseVersion()
+}

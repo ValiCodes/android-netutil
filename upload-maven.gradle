@@ -1,0 +1,109 @@
+def getLocalProperties() {
+    Properties properties = new Properties()
+    File file = project.rootProject.file('local.properties');
+    if (file.exists()) {
+        properties.load(file.newDataInputStream());
+    }
+    return properties
+}
+
+Properties properties = getLocalProperties()
+def SNAPSHOT = properties.get("SNAPSHOT")
+def publishToTestSnapshots = properties.get("publish_to_test_snapshots")
+def testSnapshotsName = properties.get("test_snapshots_name")
+def String mavenDescription = properties.get("maven_description")
+def nexusUrl = properties.get("nexusUrl")
+def nexusUsername = properties.get("nexusUsername")
+def nexusPassword = properties.get("nexusPassword")
+
+
+def hasAndroidPlugin() {
+    return getPlugins().inject(false) { a, b ->
+        def classStr = b.getClass().name
+        def isAndroid = ("com.android.build.gradle.LibraryPlugin" == classStr) || ("com.android.build.gradle.AppPlugin" == classStr)
+        a || isAndroid
+    }
+}
+
+task sourcesJar(type: Jar) {
+    if (hasAndroidPlugin()) {
+        from android.sourceSets.main.java.srcDirs
+        classifier = 'sources'
+    } else {
+        from sourceSets.main.allSource
+        classifier = 'sources'
+    }
+}
+
+/**
+ * generate android javadoc
+ */
+task androidJavadocs(type: Javadoc) {
+    if (hasAndroidPlugin()) {
+        source = android.sourceSets.main.java.srcDirs
+        classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+        failOnError = false //ignore error
+    }
+}
+
+/**
+ * javadoc config
+ */
+androidJavadocs {
+    options {
+        encoding "UTF-8"
+        charSet 'UTF-8'
+        author true
+        version true
+        links "http://docs.oracle.com/javase/7/docs/api"
+        title project.name
+    }
+}
+
+/**
+ * generate xxx-javadoc.jar
+ */
+task javadocsJar(type: Jar, dependsOn: androidJavadocs) {
+    if (hasAndroidPlugin()) {
+        from androidJavadocs.destinationDir
+        classifier = 'javadoc'
+    } else {
+        from javadoc
+        classifier 'javadoc'
+    }
+}
+
+def packageName = GROUP // 'GROUP' defined in 'gradle.properties'
+def libraryVersion = configVersionName
+if (SNAPSHOT == 'true') libraryVersion = libraryVersion + "-SNAPSHOT"
+if (mavenDescription == null || mavenDescription.trim() == '') mavenDescription = project.description
+def snapshotUrl = "maven-snapshots"
+if (publishToTestSnapshots == 'true') snapshotUrl = testSnapshotsName
+
+// publish to Nexus3 - `./gradlew :[module]:uploadArchives`
+apply plugin: 'maven'
+artifacts {
+    archives sourcesJar
+    //archives javadocsJar
+}
+uploadArchives {
+    configuration = configurations.archives
+    println "archives to upload: " + configuration.allArtifacts.files.asPath
+    repositories {
+        mavenDeployer {
+            repository(url: "${nexusUrl}/repository/maven-releases/") {
+                authentication(userName: nexusUsername, password: nexusPassword)
+            }
+            snapshotRepository(url: "${nexusUrl}/repository/${snapshotUrl}") {
+                authentication(userName: nexusUsername, password: nexusPassword)
+            }
+            pom.project {
+                version libraryVersion
+                artifactId project.name
+                groupId packageName
+                //packaging 'aar'
+                description mavenDescription
+            }
+        }
+    }
+}
