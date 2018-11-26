@@ -20,24 +20,46 @@ sdk.dir=<Your SDK Path>
 #
 ################################################################
 
-# nexus maven 地址
-nexusUrl=http://10.16.138.198:8081
+# 项目的 Group Id
+mavenGroup=com.yimi.netutil
 
-# nexus maven 用户名 <你的爱奇艺邮箱ID，不带后缀>
-nexusUsername=zhangsanfeng
+# maven 地址
+mavenUrl=http://maven.yimi.com:8081/artifactory/
 
-# nexus maven 用户密码 <你的爱奇艺邮箱密码>
-nexusPassword=1234
+# maven 用户名 <maven账号: 你的邮箱ID,不带@后缀>
+mavenUserName=zhangsan
 
-# 是否发布到 SNAPSHOT 库: 1) true - 发布到镜像库; 2) false - 发布到 Release 库。
+# maven 用户密码 <maven密码>
+mavenPassword=123456
+
+# maven release path
+# such as: "http://maven.yimi.com:8081/artifactory/libs-release-local/"
+#                                                  ^^^^^^^^^^^^^^^^^^
+mavenReleasePath=libs-release-local
+
+# maven release path
+# such as: "http://maven.yimi.com:8081/artifactory/libs-snapshot-local/"
+#                                                  ^^^^^^^^^^^^^^^^^^^
+mavenSnapshotPath=libs-snapshot-local
+
+# Your Test SNAPSHOT repo path,
+# such as: "http://maven.yimi.com:8081/artifactory/libs-snapshot-local-test/"
+#                                                  ^^^^^^^^^^^^^^^^^^^^^^^^
+mavenTestSnapshotPath=libs-snapshot-local-zhaoya
+
+# 是否发布到 SNAPSHOT 库
+# 1) true - 发布到 SNAPSHOT 库;
+# 2) false - 发布到 Release 库。
 SNAPSHOT=true
 
-# 是否发布到 你自己的 测试 SNAPSHOT 库: 1) true - 发布到自己测试镜像库; 2) false - 发布到默认镜像库。
-publish_to_test_snapshots=true
-
-# 你自己的 测试 SNAPSHOT 库名字, 如: http://10.16.138.198:8081/repository/maven-test/, 只填写: maven-test
-test_snapshots_name=maven-test
+# 是否发布到 你自己的 测试 SNAPSHOT 库
+# 1) true - 发布到自己的 测试 SNAPSHOT 库;
+# 2) false - 发布到默认的 SNAPSHOT 库。
+publishToTestSnapshot=true
 
 # 本次发布的描述
-maven_description=这是发布描述
+mavenDescription=这是本次发布的描述
+
+
+
 

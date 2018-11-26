@@ -9,6 +9,7 @@ import android.net.NetworkInfo;
 import android.support.annotation.Nullable;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 
 import com.yimi.netutil.progressdialog.QProgressDialog;
@@ -547,6 +548,9 @@ public class NetUtils {
     }
 
     public static void init(Context context, boolean debug) {
+        Log.d("NetUtil Version: "
+                + com.yimi.netutil.BuildConfig.VERSION_NAME
+                + " (" + com.yimi.netutil.BuildConfig.VERSION_CODE + ")");
         if (isInited) {
             Glog.e("initialized already");
             return;

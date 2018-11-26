@@ -1,20 +1,26 @@
+import org.gradle.api.publish.maven.internal.publication.DefaultMavenPom
+
 def getLocalProperties() {
-    Properties properties = new Properties()
-    File file = project.rootProject.file('local.properties');
+    Properties localProperties = new Properties()
+    File file = project.rootProject.file('local.properties')
     if (file.exists()) {
-        properties.load(file.newDataInputStream());
+        localProperties.load(file.newReader("UTF-8"))
     }
-    return properties
+    return localProperties
 }
 
-Properties properties = getLocalProperties()
-def SNAPSHOT = properties.get("SNAPSHOT")
-def publishToTestSnapshots = properties.get("publish_to_test_snapshots")
-def testSnapshotsName = properties.get("test_snapshots_name")
-def String mavenDescription = properties.get("maven_description")
-def nexusUrl = properties.get("nexusUrl")
-def nexusUsername = properties.get("nexusUsername")
-def nexusPassword = properties.get("nexusPassword")
+// get Local Properties
+Properties localProperties = getLocalProperties()
+def SNAPSHOT = localProperties.get("SNAPSHOT")
+def publishToTestSnapshot = localProperties.get("publishToTestSnapshot")
+def mavenReleasePath = localProperties.get("mavenReleasePath")
+def mavenSnapshotPath = localProperties.get("mavenSnapshotPath")
+def mavenTestSnapshotPath = localProperties.get("mavenTestSnapshotPath")
+def mavenDescription = localProperties.get("mavenDescription")
+def mavenUrl = localProperties.get("mavenUrl")
+def mavenUserName = localProperties.get("mavenUserName")
+def mavenPassword = localProperties.get("mavenPassword")
+def mavenGroup = localProperties.get("mavenGroup")
 
 
 def hasAndroidPlugin() {
@@ -73,14 +79,132 @@ task javadocsJar(type: Jar, dependsOn: androidJavadocs) {
     }
 }
 
-def packageName = GROUP // 'GROUP' defined in 'gradle.properties'
 def libraryVersion = configVersionName
-if (SNAPSHOT == 'true') libraryVersion = libraryVersion + "-SNAPSHOT"
 if (mavenDescription == null || mavenDescription.trim() == '') mavenDescription = project.description
-def snapshotUrl = "maven-snapshots"
-if (publishToTestSnapshots == 'true') snapshotUrl = testSnapshotsName
+def mavenPath = mavenReleasePath
+if (SNAPSHOT == 'true') {
+    libraryVersion = libraryVersion + "-SNAPSHOT"
+    mavenPath = mavenSnapshotPath
+    if (publishToTestSnapshot == 'true') mavenPath = mavenTestSnapshotPath
+}
 
-// publish to Nexus3 - `./gradlew :[module]:uploadArchives`
+/***************************************************************************************************
+ * publish to artifactory maven
+ *
+ * run with CMD:
+ *  `./gradlew clean --stacktrace`
+ *  `./gradlew :<module>:assembleRelease --stacktrace`
+ *  `./gradlew :<module>:generatePomFileForAarPublication --stacktrace`
+ *  `./gradlew :<module>:artifactoryPublish --stacktrace`
+ **************************************************************************************************/
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.artifactory'
+publishing {
+    publications {
+        aar(MavenPublication) {
+            groupId mavenGroup
+            version = libraryVersion
+            artifactId project.getName()
+
+            // Tell maven to prepare the generated "*.aar" file for publishing
+            artifact("$buildDir/outputs/aar/${project.getName()}-release.aar")
+
+            // publish sources
+            artifact sourcesJar
+
+            // publish javadocs
+            //artifact javadocsJar
+
+            configPomDescription(pom, mavenDescription)
+            configPomDependencies(pom)
+        }
+    }
+}
+
+
+artifactory {
+    contextUrl = mavenUrl
+    publish {
+        repository {
+            // The Artifactory repository key(path) to publish to
+            repoKey = mavenPath
+            username = mavenUserName
+            password = mavenPassword
+        }
+        defaults {
+            // Tell the Artifactory Plugin which artifacts should be published to Artifactory.
+            publications('aar')
+            publishArtifacts = true
+
+            // Optional map of properties to attach to all published artifacts
+            properties = ['qa.level': 'basic', 'dev.team': 'core']
+            // Publish generated POM files to Artifactory (true by default)
+            publishPom = true
+        }
+    }
+}
+afterEvaluate {
+    configDependency()
+}
+
+/**
+ * config task dependency
+ */
+def configDependency() {
+    // after this, you can execute './gradlew artifactoryPublish'
+    // instead of './gradlew assembleRelease artifactoryPublish'
+    artifactoryPublish.dependsOn assembleRelease, sourcesJar //, javadocsJar
+
+    /// not work sometimes
+    //artifactoryPublish.dependsOn generatePomFileForAarPublication
+}
+
+/**
+ *  The Artifactory publication doesn't know about our dependencies,
+ *  so we have to manually add them to the pom.
+ */
+def configPomDependencies(DefaultMavenPom pom) {
+    pom.withXml {
+        // for dependencies and exclusions
+        def dependenciesNode = asNode().appendNode('dependencies')
+        configurations.compile.allDependencies.withType(ModuleDependency) { ModuleDependency dp ->
+            def dependencyNode = dependenciesNode.appendNode('dependency')
+            dependencyNode.appendNode('groupId', dp.group)
+            dependencyNode.appendNode('artifactId', dp.name)
+            dependencyNode.appendNode('version', dp.version)
+
+            // for exclusions
+            if (dp.excludeRules.size() > 0) {
+                def exclusions = dependencyNode.appendNode('exclusions')
+                dp.excludeRules.each { ExcludeRule ex ->
+                    def exclusion = exclusions.appendNode('exclusion')
+                    exclusion.appendNode('groupId', ex.group)
+                    exclusion.appendNode('artifactId', ex.module)
+                }
+            }
+        }
+    }
+}
+
+/**
+ *  The Artifactory publication doesn't know about our description,
+ *  so we have to manually add them to the pom.
+ */
+def configPomDescription(DefaultMavenPom pom, String desc) {
+    pom.withXml {
+        def descriptionNode = asNode().appendNode('description')
+        descriptionNode.value = desc
+    }
+}
+
+/***************************************************************************************************
+ * publish to Nexus3
+ *
+ * run with CMD:
+ *  `./gradlew clean --stacktrace`
+ *  `./gradlew :<module>:uploadArchives --stacktrace`
+ **************************************************************************************************/
+/*
 apply plugin: 'maven'
 artifacts {
     archives sourcesJar
@@ -91,19 +215,20 @@ uploadArchives {
     println "archives to upload: " + configuration.allArtifacts.files.asPath
     repositories {
         mavenDeployer {
-            repository(url: "${nexusUrl}/repository/maven-releases/") {
-                authentication(userName: nexusUsername, password: nexusPassword)
+            repository(url: "${mavenUrl}/repository/${mavenPath}/") {
+                authentication(userName: mavenUserName, password: mavenPassword)
             }
-            snapshotRepository(url: "${nexusUrl}/repository/${snapshotUrl}") {
-                authentication(userName: nexusUsername, password: nexusPassword)
+            snapshotRepository(url: "${mavenUrl}/repository/${mavenPath}") {
+                authentication(userName: mavenUserName, password: mavenPassword)
             }
             pom.project {
                 version libraryVersion
                 artifactId project.name
-                groupId packageName
+                groupId mavenGroup
                 //packaging 'aar'
                 description mavenDescription
             }
         }
     }
 }
+*/
