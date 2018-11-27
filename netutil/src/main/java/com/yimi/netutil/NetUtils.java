@@ -31,6 +31,7 @@ import okhttp3.Response;
  */
 
 public class NetUtils {
+    private static final String TAG = "NetUtil";
     public static final String Net_Wifi = "wifi";
     public static final String Net_UnKnown = "unknown";
 
@@ -548,7 +549,7 @@ public class NetUtils {
     }
 
     public static void init(Context context, boolean debug) {
-        Log.d("NetUtil Version: "
+        Log.d(TAG, "NetUtil Version: "
                 + com.yimi.netutil.BuildConfig.VERSION_NAME
                 + " (" + com.yimi.netutil.BuildConfig.VERSION_CODE + ")");
         if (isInited) {
