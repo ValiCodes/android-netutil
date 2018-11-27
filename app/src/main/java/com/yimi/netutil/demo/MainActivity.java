@@ -67,6 +67,65 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "onResponse: " + mResponse);
             }
         });
+
+
+        // test post
+        /*String baseUrl = "http://tools.yimigit.com/showdoc/index.php";
+        Map<String, String> params = new HashMap<>();
+        params.put("s", "/34");
+        params.put("page_id", "1213");
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "multipart/form-data");
+        headers.put("Cache-Control", "no-cache");
+        NetUtils.post(baseUrl, params, headers, new NetCallback<TestResponseBean>() {
+            @Override
+            public void onFailure(int resultCode, String resultMsg) {
+                Log.e(TAG, "onFailure: " + resultCode + ", " + resultMsg);
+            }
+
+            @Override
+            public void onResponse(TestResponseBean response) {
+                // 直接使用解析后的 业务的数据Bean
+                Log.d(TAG, "onResponse: " + response.code + ", " + response.msg);
+
+                // 也可以使用解析前的 json string -> NetCallback#mResponse
+                Log.d(TAG, "onResponse: " + mResponse);
+            }
+        });*/
+
+        //NetCallback 所有可 实现/复写 的回调API
+        /*NetUtils.getCmsWithParams(baseUrl, params, new NetCallback<TestResponseBean>() {
+            @Override
+            public void onFailure(int resultCode, String resultMsg) {
+                Log.e(TAG, "onFailure: " + resultCode + ", " + resultMsg);
+            }
+
+            @Override
+            public void onResponse(TestResponseBean response) {
+                // 直接使用解析后的 业务的数据Bean
+                Log.d(TAG, "onResponse: " + response.code + ", " + response.msg);
+
+                // 也可以使用解析前的 json string -> NetCallback#mResponse
+                Log.d(TAG, "onResponse: " + mResponse);
+            }
+
+
+            @Override
+            public boolean isRunning() {
+                return super.isRunning();
+            }
+
+            @Override
+            public void processRunningError() {
+                super.processRunningError();
+            }
+
+            @Override
+            public void onFinally() {
+                super.onFinally();
+            }
+        });*/
+
     }
 
 }
