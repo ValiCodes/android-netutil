@@ -89,6 +89,23 @@ public class NetUtils {
         return OkHttpFactory.getInstance().postAsyncWithFormData(function, requestMap, headers, callback);
     }
 
+    /**
+     * @param url
+     * @param fileKey
+     * @param file
+     * @param fileContentType such as: "image/*", "image/jpeg", "image/png"
+     * @param params
+     * @param headers
+     * @param callback
+     * @return
+     */
+    public static Call postFileWithFormData(
+            String url, String fileKey, File file, String fileContentType, @Nullable HashMap<String, String> params,
+            Map<String, String> headers, NetCallback callback) {
+        return OkHttpFactory.getInstance().postFileAsyncWithFormData(
+                url, fileKey, file, fileContentType, params, headers, callback);
+    }
+
     public static Call post(String function, byte[] requestBody, NetCallback callback) {
         return OkHttpFactory.getInstance().postAsync(function, requestBody, callback);
     }
@@ -159,7 +176,7 @@ public class NetUtils {
      *
      * @param url
      */
-    public static Response getCmsSync(String url) throws Exception{
+    public static Response getCmsSync(String url) throws Exception {
         return OkHttpFactory.getInstance().getSync(url);
     }
 

@@ -3,6 +3,7 @@ package com.yimi.netutil;
 import android.content.Context;
 import android.net.Uri;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
 import com.facebook.stetho.Stetho;
@@ -12,6 +13,7 @@ import com.google.gson.Gson;
 import java.io.File;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +26,7 @@ import okhttp3.Cache;
 import okhttp3.Call;
 import okhttp3.FormBody;
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -115,6 +118,41 @@ public class OkHttpFactory {
     }
 
     /**
+     * @param function
+     * @param fileKey
+     * @param file
+     * @param fileContentType such as: "image/*", "image/jpeg", "image/png"
+     * @param params
+     * @param request
+     * @return
+     */
+    public static Request.Builder netRequestForPostFileWithFormData(
+            String function, String fileKey, File file, String fileContentType,
+            HashMap<String, String> params, Request.Builder request) {
+        MultipartBody.Builder multiRequestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM);
+
+        if(file != null && fileKey != null) {
+            RequestBody body = RequestBody.create(MediaType.parse(fileContentType), file);
+            multiRequestBody.addFormDataPart(fileKey, file.getName(), body);
+        } else {
+            Glog.e("netRequestForPostFileWithFormData: fileKey or file null");
+        }
+
+        if (params != null) {
+            for (HashMap.Entry<String, String> entry : params.entrySet()) {
+                multiRequestBody.addFormDataPart(
+                        Utils.notNull(entry.getKey()), Utils.notNull(entry.getValue()));
+            }
+        }
+
+        request.post(multiRequestBody.build());
+        //addHttpHeaders(request, function);
+        request.tag(function);
+        return request;
+    }
+
+    /**
      * @param request
      * @param requestBody
      * @param functionName
@@ -163,6 +201,28 @@ public class OkHttpFactory {
         return call;
     }
 
+    /**
+     * @param url
+     * @param fileKey
+     * @param file
+     * @param fileContentType such as: "image/*", "image/jpeg", "image/png"
+     * @param request
+     * @param params
+     * @param callback
+     * @return
+     */
+    private Call doAsyncPostFileWithFormData(
+            String url, String fileKey, File file, String fileContentType, Request.Builder request,
+            HashMap<String, String> params, NetCallback callback) {
+        final OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
+        request = netRequestForPostFileWithFormData(
+                url, fileKey, file, fileContentType, params, request);
+        Call call = okHttpClient.newCall(request.build());
+        call.enqueue(callback);
+        retryCallBack(call, okHttpClient, callback);
+        return call;
+    }
+
     public Call postAsync(String function, byte[] requestBody, final NetCallback callback) {
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(function));
@@ -191,6 +251,28 @@ public class OkHttpFactory {
         // add headers
         addHeaders(request, headers);
         return doAsyncRequestWithFormData(function, request, params, callback);
+    }
+
+    /**
+     * @param url
+     * @param fileKey
+     * @param file
+     * @param fileContentType such as: "image/*", "image/jpeg", "image/png"
+     * @param params
+     * @param headers
+     * @param callback
+     * @return
+     */
+    public Call postFileAsyncWithFormData(
+            String url, String fileKey, File file, String fileContentType,
+            @Nullable HashMap<String, String> params,
+            @Nullable Map<String, String> headers, final NetCallback callback) {
+        Request.Builder request = new Request.Builder()
+                .url(ServerConnect.getInstance().getUrl(url));
+        // add headers
+        addHeaders(request, headers);
+        return doAsyncPostFileWithFormData(
+                url, fileKey, file, fileContentType, request, params, callback);
     }
 
     public <T> T postSync(String function, byte[] requestBody, Class<T> clazz) {
