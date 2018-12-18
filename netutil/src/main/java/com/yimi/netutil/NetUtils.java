@@ -14,8 +14,6 @@ import android.view.KeyEvent;
 
 import com.yimi.netutil.progressdialog.QProgressDialog;
 
-import org.json.JSONObject;
-
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.net.URL;
@@ -65,16 +63,16 @@ public class NetUtils {
         return map.containsKey(url);
     }
 
-    public static Call post(String function, @Nullable Map map, NetCallback callback) {
+    public static Call post(String function, @Nullable Map params, NetCallback callback) {
         callback.functionName = function;
-        return post(function, getJsonStringData(map), callback);
+        return OkHttpFactory.getInstance().postAsync(function, params, callback);
     }
 
     public static Call post(
-            String function, @Nullable Map params, Map<String, String> headers,
-            NetCallback callback) {
+            String function, @Nullable Map params,
+            Map<String, String> headers, NetCallback callback) {
         callback.functionName = function;
-        return post(function, getJsonStringData(params), headers, callback);
+        return OkHttpFactory.getInstance().postAsync(function, params, headers, callback);
     }
 
     public static Call postWithFormData(
@@ -106,15 +104,6 @@ public class NetUtils {
             Map<String, String> headers, NetCallback callback) {
         return OkHttpFactory.getInstance().postFileAsyncWithFormData(
                 url, fileKey, file, fileContentType, params, headers, callback);
-    }
-
-    public static Call post(String function, byte[] requestBody, NetCallback callback) {
-        return OkHttpFactory.getInstance().postAsync(function, requestBody, callback);
-    }
-
-    public static Call post(String function, byte[] requestBody, Map<String, String> headers,
-                            NetCallback callback) {
-        return OkHttpFactory.getInstance().postAsync(function, requestBody, headers, callback);
     }
 
     public static void postFile(File file, NetCallback callback) {
@@ -157,15 +146,20 @@ public class NetUtils {
 
     /**
      * 调用网络请求的同步方法，不能在主线程使用
-     * <p>
-     * <strong> !!! Notice that the post data is json string. </strong>
      *
      * @param function
-     * @param requestMap
+     * @param params
      */
-    public static <T> T postSync(String function, @Nullable HashMap requestMap, Class<T> clazz) {
+    public static <T> T postSyncWithJsonData(
+            String function, @Nullable HashMap params, Class<T> clazz) {
         return OkHttpFactory.getInstance().postSync(
-                function, getJsonStringData(requestMap), clazz);
+                function, params, clazz, OkHttpFactory.POST_DATA_TYPE_JSON);
+    }
+
+    public static <T> T postSyncWithFormData(
+            String function, @Nullable HashMap params, Class<T> clazz) {
+        return OkHttpFactory.getInstance().postSync(
+                function, params, clazz, OkHttpFactory.POST_DATA_TYPE_FORM);
     }
 
     /**
@@ -389,16 +383,10 @@ public class NetUtils {
         return OkHttpFactory.getInstance().getSync(url, clazz);
     }
 
-    public static void postWithDialog(
-            Activity activity, String message, String function, @Nullable HashMap requestMap,
+    private static void postWithDialog(
+            Activity activity, String message, String function, HashMap requestMap,
             NetCallback callback) {
         callback.functionName = function;
-        postWithDialog(activity, message, function, getJsonStringData(requestMap), callback);
-    }
-
-    private static void postWithDialog(
-            Activity activity, String message, String function, byte[] requestBody,
-            NetCallback callback) {
         if (TextUtils.isEmpty(message)) {
             message = "";
         }
@@ -408,7 +396,7 @@ public class NetUtils {
             dialog = getLoadingDialog(activity, message);
             callback.loadingDialog = dialog;
         }
-        final Call call = post(function, requestBody, callback);
+        final Call call = post(function, requestMap, callback);
         if (dialog != null) {
             dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
                 @Override
@@ -427,19 +415,6 @@ public class NetUtils {
         }
     }
 
-    private static byte[] getJsonStringData(Map jsonMap) {
-        byte[] result = null;
-        if (jsonMap == null) {
-            jsonMap = new HashMap();
-        }
-        try {
-            //result = JSONObject.toJSONString(jsonMap).getBytes("utf-8");
-            result = new JSONObject(jsonMap).toString().getBytes("utf-8");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return result;
-    }
 
     private static QProgressDialog getLoadingDialog(Context context, String dialogMessage) {
         if (context == null) {

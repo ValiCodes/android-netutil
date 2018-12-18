@@ -2,6 +2,7 @@ package com.yimi.netutil;
 
 import android.content.Context;
 import android.net.Uri;
+import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
@@ -11,6 +12,8 @@ import com.facebook.stetho.okhttp3.StethoInterceptor;
 import com.google.gson.Gson;
 
 import java.io.File;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.HashMap;
@@ -44,6 +47,17 @@ public class OkHttpFactory {
     public static final int TIME_OUT_NUM = 20;
     public static final int DEBUG_TIME_OUT_NUM = 120;
     public static final int DEFAULT_TIMEOUT = 10;
+
+    public static final int POST_DATA_TYPE_JSON = 1;
+    public static final int POST_DATA_TYPE_FORM = 2;
+
+    @IntDef({
+            POST_DATA_TYPE_JSON,
+            POST_DATA_TYPE_FORM,
+    })
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface PostDataType {
+    }
 
     public OkHttpClient netClient;
     public OkHttpClient cmsClient;
@@ -99,15 +113,15 @@ public class OkHttpFactory {
         return okHttpClientBuilder;
     }
 
-    public static Request.Builder netRequest(
-            String function, byte[] requestBody, Request.Builder request) {
-        request.post(RequestBody.create(JSON, requestBody));
-        addHttpHeaders(request, requestBody, function);
+    public static Request.Builder getJsonDataRequest(
+            String function, Map params, Request.Builder request) {
+        request.post(RequestBody.create(JSON, Utils.getJsonStringData(params)));
+        addHttpHeadersWithJsonType(request, function);
         request.tag(function);
         return request;
     }
 
-    public static Request.Builder netRequestWithFormData(
+    public static Request.Builder getFormDataRequest(
             String function, Map requestBody, Request.Builder request) {
         FormBody.Builder formBodyBuilder = new FormBody.Builder();
         if (requestBody != null && requestBody.size() > 0) {
@@ -124,6 +138,8 @@ public class OkHttpFactory {
     }
 
     /**
+     * get MultiPort request contains file and form data.
+     *
      * @param function
      * @param fileKey
      * @param file
@@ -132,7 +148,7 @@ public class OkHttpFactory {
      * @param request
      * @return
      */
-    public static Request.Builder netRequestForPostFileWithFormData(
+    public static Request.Builder getMultiPortRequest(
             String function, String fileKey, File file, String fileContentType,
             HashMap<String, String> params, Request.Builder request) {
         MultipartBody.Builder multiRequestBody = new MultipartBody.Builder()
@@ -142,7 +158,7 @@ public class OkHttpFactory {
             RequestBody body = RequestBody.create(MediaType.parse(fileContentType), file);
             multiRequestBody.addFormDataPart(fileKey, file.getName(), body);
         } else {
-            Glog.e("netRequestForPostFileWithFormData: fileKey or file null");
+            Glog.e("getMultiPortRequest: fileKey or file null");
         }
 
         if (params != null) {
@@ -160,11 +176,9 @@ public class OkHttpFactory {
 
     /**
      * @param request
-     * @param requestBody
      * @param functionName
      */
-    public static void addHttpHeaders(
-            Request.Builder request, byte[] requestBody, String functionName) {
+    public static void addHttpHeadersWithJsonType(Request.Builder request, String functionName) {
         //// TODO: 2017/12/15 添加登录态，版本号等头部信息
         if (functionName != null && functionName.equals(HttpConstants.Upload_file)) {
             request.addHeader(HttpConstants.HEADER_CONTENT_TYPE, "application/octet-stream");
@@ -189,10 +203,9 @@ public class OkHttpFactory {
     }
 
     private Call doAsyncRequest(
-            String function, Request.Builder request,
-            byte[] requestBody, NetCallback callback) {
+            String function, Request.Builder request, Map params, NetCallback callback) {
         final OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
-        request = netRequest(function, requestBody, request);
+        request = getJsonDataRequest(function, params, request);
         Call call = okHttpClient.newCall(request.build());
         call.enqueue(callback);
         retryCallBack(call, okHttpClient, callback);
@@ -202,7 +215,7 @@ public class OkHttpFactory {
     private Call doAsyncRequestWithFormData(
             String function, Request.Builder request, Map requestBody, NetCallback callback) {
         final OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
-        request = netRequestWithFormData(function, requestBody, request);
+        request = getFormDataRequest(function, requestBody, request);
         Call call = okHttpClient.newCall(request.build());
         call.enqueue(callback);
         retryCallBack(call, okHttpClient, callback);
@@ -223,7 +236,7 @@ public class OkHttpFactory {
             String url, String fileKey, File file, String fileContentType, Request.Builder request,
             HashMap<String, String> params, NetCallback callback) {
         final OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
-        request = netRequestForPostFileWithFormData(
+        request = getMultiPortRequest(
                 url, fileKey, file, fileContentType, params, request);
         Call call = okHttpClient.newCall(request.build());
         call.enqueue(callback);
@@ -231,19 +244,19 @@ public class OkHttpFactory {
         return call;
     }
 
-    public Call postAsync(String function, byte[] requestBody, final NetCallback callback) {
+    public Call postAsync(String function, Map params, final NetCallback callback) {
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(function));
-        return doAsyncRequest(function, request, requestBody, callback);
+        return doAsyncRequest(function, request, params, callback);
     }
 
-    public Call postAsync(String function, byte[] requestBody, Map<String, String> headers,
+    public Call postAsync(String function, Map params, Map<String, String> headers,
                           final NetCallback callback) {
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(function));
         // add headers
         addHeaders(request, headers);
-        return doAsyncRequest(function, request, requestBody, callback);
+        return doAsyncRequest(function, request, params, callback);
     }
 
     public Call postAsyncWithFormData(String function, Map map, final NetCallback callback) {
@@ -283,17 +296,29 @@ public class OkHttpFactory {
                 url, fileKey, file, fileContentType, request, params, callback);
     }
 
-    public <T> T postSync(String function, byte[] requestBody, Class<T> clazz) {
+    public <T> T postSync(
+            String function, Map params, Class<T> clazz, @PostDataType int dataType) {
         OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(function));
-        request = netRequest(function, requestBody, request);
-        request.post(RequestBody.create(JSON, requestBody));
+
+        // set content type
+        switch (dataType) {
+            case POST_DATA_TYPE_JSON:
+                request = getJsonDataRequest(function, params, request);
+                break;
+            case POST_DATA_TYPE_FORM:
+                request = getFormDataRequest(function, params, request);
+                break;
+            default:
+                break;
+        }
+
         try {
             T resObj;
             Call call = okHttpClient.newCall(request.build());
             Response response = call.execute();
-            byte[] bytes = response.body().bytes();
+            //byte[] bytes = response.body().bytes();
             resObj = new Gson().fromJson(response.body().string(), clazz);
             return resObj;
         } catch (Exception e) {
@@ -312,7 +337,7 @@ public class OkHttpFactory {
             uriBuilder.appendQueryParameter("faceType", faceType);
         }*/
         Request.Builder request = new Request.Builder().url(uriBuilder.build().toString());
-        addHttpHeaders(request, null, null);
+        addHttpHeadersWithJsonType(request, null);
         request.post(RequestBody.create(BYTES, file));
         Call call = okHttpClient.newCall(request.build());
         call.enqueue(callback);

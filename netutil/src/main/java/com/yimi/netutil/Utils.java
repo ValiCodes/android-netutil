@@ -2,6 +2,11 @@ package com.yimi.netutil;
 
 import com.google.gson.Gson;
 
+import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
+
 public class Utils {
 
     private static final String TAG = "Utils";
@@ -27,5 +32,19 @@ public class Utils {
             return "";
         }
         return string;
+    }
+
+    public static byte[] getJsonStringData(Map jsonMap) {
+        byte[] result = null;
+        if (jsonMap == null) {
+            jsonMap = new HashMap();
+        }
+        try {
+            //result = JSONObject.toJSONString(jsonMap).getBytes("utf-8");
+            result = new JSONObject(jsonMap).toString().getBytes("utf-8");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
     }
 }
