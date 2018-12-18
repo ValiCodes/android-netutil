@@ -152,12 +152,14 @@ public class NetUtils {
 
     /**
      * 调用网络请求的同步方法，不能在主线程使用
-     *
+     * <p>
+     * <strong> !!! Notice that the post data is json string. </strong>
      * @param function
      * @param requestMap
      */
     public static <T> T postSync(String function, @Nullable HashMap requestMap, Class<T> clazz) {
-        return OkHttpFactory.getInstance().postSync(function, addCommonFields(function, requestMap), clazz);
+        return OkHttpFactory.getInstance().postSync(
+                function, addCommonFields(function, requestMap), clazz);
     }
 
     /**
@@ -607,5 +609,20 @@ public class NetUtils {
 
     public static void setDebug(boolean debug) {
         isDebug = debug;
+    }
+
+    /**
+     * Cancel all calls currently enqueued or executing. Includes calls executed both {@linkplain
+     * Call#execute() synchronously} and {@linkplain Call#enqueue asynchronously}.
+     */
+    public static void cancelAll() {
+        try {
+            // cancel get
+            OkHttpFactory.getInstance().cmsClient.dispatcher().cancelAll();
+            // cancel post
+            OkHttpFactory.getInstance().netClient.dispatcher().cancelAll();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
