@@ -53,9 +53,11 @@ public abstract class NetCallback<T> implements Callback {
         //超时等异常
         if (e != null) {
             if (e instanceof ConnectException || e instanceof SocketTimeoutException) {
-                handleException(HttpConstants.STATUS_NETWORK_TIMEOUT, ServerConnect.getResultInfo(HttpConstants.STATUS_NETWORK_TIMEOUT));
+                handleException(HttpConstants.STATUS_NETWORK_TIMEOUT,
+                        ServerConnect.getResultInfo(HttpConstants.STATUS_NETWORK_TIMEOUT));
             } else if ((e instanceof UnknownHostException)) {
-                handleException(HttpConstants.STATUS_NETWORK_NOT_AVAILABLE, ServerConnect.getResultInfo(HttpConstants.STATUS_NETWORK_NOT_AVAILABLE));
+                handleException(HttpConstants.STATUS_NETWORK_NOT_AVAILABLE,
+                        ServerConnect.getResultInfo(HttpConstants.STATUS_NETWORK_NOT_AVAILABLE));
             } else if (e instanceof SSLHandshakeException) {
                 String message = e.getMessage();
                 if (message != null && message.contains("ExtCertPathValidatorException")) {
@@ -75,10 +77,12 @@ public abstract class NetCallback<T> implements Callback {
     public final void onResponse(Call request, final Response response) throws IOException {
         try {
             if (response.code() == 200) {
-                delayMillis = (response.receivedResponseAtMillis() - response.sentRequestAtMillis()) / 2;
+                delayMillis = (response.receivedResponseAtMillis()
+                        - response.sentRequestAtMillis()) / 2;
                 Class<T> entityClass = mClass;
                 if (entityClass == null) {
-                    entityClass = (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+                    entityClass = (Class<T>) ((ParameterizedType) getClass()
+                            .getGenericSuperclass()).getActualTypeArguments()[0];
                 }
                 resObj = manageResponse(isMtp, request, response, entityClass, functionName);
                 disposeResponse(handler, resObj, request, response.body().toString(), isReTry);
@@ -102,7 +106,9 @@ public abstract class NetCallback<T> implements Callback {
         this.reTryCallListener = reTryCallListener;
     }
 
-    public void handleResult(T resObj, String resultCode, String resultMsg, Call call, String bodyToString, boolean isReTry) {
+    public void handleResult(
+            T resObj, String resultCode, String resultMsg, Call call,
+            String bodyToString, boolean isReTry) {
         /*//统一处理错误码
         if (HttpConstants.RESPONSE_CODE_9000 == resultCode) {
             if (!isReTry) {
@@ -139,7 +145,9 @@ public abstract class NetCallback<T> implements Callback {
     }
 
 
-    public <T> T manageResponse(boolean isMtp, Call request, Response response, Class<T> entityClass, String functionName) throws Exception {
+    public <T> T manageResponse(
+            boolean isMtp, Call request, Response response,
+            Class<T> entityClass, String functionName) throws Exception {
         T resObj = null;
         OkHttpFactory.checkResponseCertificate(isMtp, response);
         mResponse = response.body().string();
@@ -155,7 +163,8 @@ public abstract class NetCallback<T> implements Callback {
             long t1 = System.currentTimeMillis();
             //resObj = JSON.parseObject(resString, entityClass);
             resObj = new Gson().fromJson(resString, entityClass);
-            Glog.d(TAG, "fastjsondecodetime function:" + functionName + "  time:" + (System.currentTimeMillis() - t1));
+            Glog.d(TAG, "fastjsondecodetime function:" + functionName
+                    + "  time:" + (System.currentTimeMillis() - t1));
         }
 
         //数据解析为null报数据解析异常
@@ -167,7 +176,9 @@ public abstract class NetCallback<T> implements Callback {
         return resObj;
     }
 
-    private void disposeResponse(Handler handler, final T resObj, final Call call, final String bodyToString, final boolean isReTry) {
+    private void disposeResponse(
+            Handler handler, final T resObj, final Call call,
+            final String bodyToString, final boolean isReTry) {
         handler.post(new Runnable() {
             @Override
             public void run() {
@@ -194,11 +205,13 @@ public abstract class NetCallback<T> implements Callback {
                         responseBase.msg = "数据解析失败" + e.getMessage();
                         responseBase.code = "404";
                     } finally {
-                        handleResult(resObj, responseBase.code, responseBase.msg, call, bodyToString, isReTry);
+                        handleResult(resObj, responseBase.code, responseBase.msg,
+                                call, bodyToString, isReTry);
                     }
                 } else if (resObj instanceof JSONObject) {
                     JSONObject object = (JSONObject) resObj;
-                    handleResult(resObj, object.optString("code"), object.optString("msg"), call, bodyToString, isReTry);
+                    handleResult(resObj, object.optString("code"),
+                            object.optString("msg"), call, bodyToString, isReTry);
                 } else {
                     //泛型对象未继承xxxx
                     doOnResponse(resObj);

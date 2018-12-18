@@ -81,7 +81,9 @@ public class OkHttpFactory {
     private OkHttpClient.Builder getOkHttpBuilder() {
         OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient.Builder();
         if (NetUtils.isDebug()) {
-            okHttpClientBuilder.connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS).writeTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS).readTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS);
+            okHttpClientBuilder.connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
+                    .writeTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
+                    .readTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS);
             okHttpClientBuilder.addNetworkInterceptor(new StethoInterceptor());
             okHttpClientBuilder.hostnameVerifier(new HostnameVerifier() {
                 @Override
@@ -90,19 +92,23 @@ public class OkHttpFactory {
                 }
             });
         } else {
-            okHttpClientBuilder.connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS).writeTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS).readTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS);
+            okHttpClientBuilder.connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
+                    .writeTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
+                    .readTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS);
         }
         return okHttpClientBuilder;
     }
 
-    public static Request.Builder netRequest(String function, byte[] requestBody, Request.Builder request) {
+    public static Request.Builder netRequest(
+            String function, byte[] requestBody, Request.Builder request) {
         request.post(RequestBody.create(JSON, requestBody));
         addHttpHeaders(request, requestBody, function);
         request.tag(function);
         return request;
     }
 
-    public static Request.Builder netRequestWithFormData(String function, Map requestBody, Request.Builder request) {
+    public static Request.Builder netRequestWithFormData(
+            String function, Map requestBody, Request.Builder request) {
         FormBody.Builder formBodyBuilder = new FormBody.Builder();
         if (requestBody != null && requestBody.size() > 0) {
             for (Iterator iterator = requestBody.entrySet().iterator(); iterator.hasNext(); ) {
@@ -132,7 +138,7 @@ public class OkHttpFactory {
         MultipartBody.Builder multiRequestBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM);
 
-        if(file != null && fileKey != null) {
+        if (file != null && fileKey != null) {
             RequestBody body = RequestBody.create(MediaType.parse(fileContentType), file);
             multiRequestBody.addFormDataPart(fileKey, file.getName(), body);
         } else {
@@ -157,7 +163,8 @@ public class OkHttpFactory {
      * @param requestBody
      * @param functionName
      */
-    public static void addHttpHeaders(Request.Builder request, byte[] requestBody, String functionName) {
+    public static void addHttpHeaders(
+            Request.Builder request, byte[] requestBody, String functionName) {
         //// TODO: 2017/12/15 添加登录态，版本号等头部信息
         if (functionName != null && functionName.equals(HttpConstants.Upload_file)) {
             request.addHeader(HttpConstants.HEADER_CONTENT_TYPE, "application/octet-stream");
@@ -192,7 +199,8 @@ public class OkHttpFactory {
         return call;
     }
 
-    private Call doAsyncRequestWithFormData(String function, Request.Builder request, Map requestBody, NetCallback callback) {
+    private Call doAsyncRequestWithFormData(
+            String function, Request.Builder request, Map requestBody, NetCallback callback) {
         final OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
         request = netRequestWithFormData(function, requestBody, request);
         Call call = okHttpClient.newCall(request.build());
@@ -339,7 +347,7 @@ public class OkHttpFactory {
         return null;
     }
 
-    public Response getSync(String url) throws Exception{
+    public Response getSync(String url) throws Exception {
         OkHttpClient okHttpClient = OkHttpFactory.getInstance().cmsClient;
         Request.Builder request = new Request.Builder()
                 .url(url).get();
@@ -347,7 +355,8 @@ public class OkHttpFactory {
         return okHttpClient.newCall(request.build()).execute();
     }
 
-    private void retryCallBack(final Call call, final OkHttpClient okHttpClient, final NetCallback callback) {
+    private void retryCallBack(
+            final Call call, final OkHttpClient okHttpClient, final NetCallback callback) {
         callback.setReTryCallListener(new NetCallback.ReTryCallListener() {
             @Override
             public void reTryCallListener(Call call, String bodyToString) {
@@ -373,7 +382,8 @@ public class OkHttpFactory {
         }
     }
 
-    public static void checkResponseCertificate(boolean isMtp, Response response) throws CertificateException {
+    public static void checkResponseCertificate(
+            boolean isMtp, Response response) throws CertificateException {
         if (isMtp
                 && response.handshake() != null) {
             List<Certificate> certificateList = response.handshake().peerCertificates();

@@ -67,14 +67,14 @@ public class NetUtils {
 
     public static Call post(String function, @Nullable Map map, NetCallback callback) {
         callback.functionName = function;
-        return post(function, addCommonMapFields(function, map), callback);
+        return post(function, getJsonStringData(map), callback);
     }
 
     public static Call post(
             String function, @Nullable Map params, Map<String, String> headers,
             NetCallback callback) {
         callback.functionName = function;
-        return post(function, addCommonMapFields(function, params), headers, callback);
+        return post(function, getJsonStringData(params), headers, callback);
     }
 
     public static Call postWithFormData(
@@ -86,7 +86,8 @@ public class NetUtils {
     public static Call postWithFormData(String function, @Nullable Map requestMap,
                                         Map<String, String> headers, NetCallback callback) {
         callback.functionName = function;
-        return OkHttpFactory.getInstance().postAsyncWithFormData(function, requestMap, headers, callback);
+        return OkHttpFactory.getInstance()
+                .postAsyncWithFormData(function, requestMap, headers, callback);
     }
 
     /**
@@ -100,7 +101,8 @@ public class NetUtils {
      * @return
      */
     public static Call postFileWithFormData(
-            String url, String fileKey, File file, String fileContentType, @Nullable HashMap<String, String> params,
+            String url, String fileKey, File file, String fileContentType,
+            @Nullable HashMap<String, String> params,
             Map<String, String> headers, NetCallback callback) {
         return OkHttpFactory.getInstance().postFileAsyncWithFormData(
                 url, fileKey, file, fileContentType, params, headers, callback);
@@ -120,7 +122,9 @@ public class NetUtils {
         OkHttpFactory.getInstance().postFile(file, callback);
     }
 
-    public static void postFileWithDialog(Activity activity, String message, String serviceId, String faceType, File file, NetCallback callback) {
+    public static void postFileWithDialog(
+            Activity activity, String message, String serviceId, String faceType, File file,
+            NetCallback callback) {
         callback.functionName = HttpConstants.Upload_file;
 
         if (TextUtils.isEmpty(message)) {
@@ -138,7 +142,8 @@ public class NetUtils {
                 @Override
                 public void onCancel(DialogInterface dialog) {
                     if (!call.isCanceled()) {
-                        OkHttpFactory.getInstance().netClient.dispatcher().executorService().execute(new Runnable() {
+                        OkHttpFactory.getInstance().netClient.dispatcher()
+                                .executorService().execute(new Runnable() {
                             @Override
                             public void run() {
                                 call.cancel();
@@ -154,12 +159,13 @@ public class NetUtils {
      * 调用网络请求的同步方法，不能在主线程使用
      * <p>
      * <strong> !!! Notice that the post data is json string. </strong>
+     *
      * @param function
      * @param requestMap
      */
     public static <T> T postSync(String function, @Nullable HashMap requestMap, Class<T> clazz) {
         return OkHttpFactory.getInstance().postSync(
-                function, addCommonFields(function, requestMap), clazz);
+                function, getJsonStringData(requestMap), clazz);
     }
 
     /**
@@ -188,7 +194,8 @@ public class NetUtils {
      * @param url
      * @param callback
      */
-    public static String getCmsWithParamsAndUrl(String url, HashMap<String, String> map, NetCallback callback) {
+    public static String getCmsWithParamsAndUrl(
+            String url, HashMap<String, String> map, NetCallback callback) {
         callback.isMtp = false;
         String mUrl = getUrlWithMap(url, map);
         OkHttpFactory.getInstance().getAsync(mUrl, callback);
@@ -201,7 +208,9 @@ public class NetUtils {
      * @param url
      * @param callback
      */
-    public static String getCmsWithParamsAndUrlAnddialog(Activity activity, String message, String url, HashMap<String, String> map, NetCallback callback) {
+    public static String getCmsWithParamsAndUrlAnddialog(
+            Activity activity, String message, String url, HashMap<String, String> map,
+            NetCallback callback) {
         if (activity != null && !activity.isFinishing()) {
             QProgressDialog dialog = getLoadingDialog(activity, message);
             callback.loadingDialog = dialog;
@@ -230,7 +239,8 @@ public class NetUtils {
      * @param url      host
      * @param callback
      */
-    public static RemoveRequest getRemoveRequestCmsWithParams(String url, Map<String, String> map, NetCallback callback) {
+    public static RemoveRequest getRemoveRequestCmsWithParams(
+            String url, Map<String, String> map, NetCallback callback) {
         callback.isMtp = false;
         String mUrl = getUrlWithMap(url, map);
         Call call = OkHttpFactory.getInstance().getAsync(mUrl, callback);
@@ -244,7 +254,8 @@ public class NetUtils {
      * @param url      host
      * @param callback
      */
-    public static void getRemoveCmsWithParams(String url, Map<String, String> map, NetCallback callback) {
+    public static void getRemoveCmsWithParams(
+            String url, Map<String, String> map, NetCallback callback) {
         callback.isMtp = false;
         callback.functionName = url;
         String mUrl = getUrlWithMap(url, map);
@@ -262,7 +273,9 @@ public class NetUtils {
      * @param url      host
      * @param callback
      */
-    public static void getCmsWithParamsAndDialog(Activity activity, String message, String url, Map<String, String> map, NetCallback callback) {
+    public static void getCmsWithParamsAndDialog(
+            Activity activity, String message, String url, Map<String, String> map,
+            NetCallback callback) {
         if (activity != null && !activity.isFinishing()) {
             QProgressDialog dialog = getLoadingDialog(activity, message);
             callback.loadingDialog = dialog;
@@ -277,7 +290,8 @@ public class NetUtils {
                 @Override
                 public void onCancel(DialogInterface dialog) {
                     if (!call.isCanceled()) {
-                        OkHttpFactory.getInstance().cmsClient.dispatcher().executorService().execute(new Runnable() {
+                        OkHttpFactory.getInstance().cmsClient.dispatcher()
+                                .executorService().execute(new Runnable() {
                             @Override
                             public void run() {
                                 call.cancel();
@@ -295,7 +309,8 @@ public class NetUtils {
      * @param url      host
      * @param callback
      */
-    public static Call getCmsWithParamsAndFunc(String url, String function, Map<String, String> map, NetCallback callback) {
+    public static Call getCmsWithParamsAndFunc(
+            String url, String function, Map<String, String> map, NetCallback callback) {
         callback.isMtp = false;
         String mUrl = getUrlWithMap(url + function, map);
         return OkHttpFactory.getInstance().getAsync(mUrl, callback);
@@ -307,7 +322,9 @@ public class NetUtils {
      * @param url      host
      * @param callback
      */
-    public static void getCmsWithParamsAndFuncAndDialog(Activity activity, String message, String url, String function, Map<String, String> map, NetCallback callback) {
+    public static void getCmsWithParamsAndFuncAndDialog(
+            Activity activity, String message, String url, String function,
+            Map<String, String> map, NetCallback callback) {
         if (activity != null && !activity.isFinishing()) {
             QProgressDialog dialog = getLoadingDialog(activity, message);
             callback.loadingDialog = dialog;
@@ -331,7 +348,8 @@ public class NetUtils {
 
     public static String getWithParamUrl(String url, String key, String value) {
         if (TextUtils.isEmpty(url)) return null;
-        if ((url.startsWith("http:") || url.startsWith("https:")) && !TextUtils.isEmpty(key) && !TextUtils.isEmpty(value)) {
+        if ((url.startsWith("http:") || url.startsWith("https:"))
+                && !TextUtils.isEmpty(key) && !TextUtils.isEmpty(value)) {
             if (containsParams(url)) {
                 url += "&";
             } else {
@@ -339,7 +357,8 @@ public class NetUtils {
             }
             url += (key + "=" + value);
         } else {
-            Glog.e("getWithParamUrl", "url = " + url + "\n key = " + key + "\n value = " + value);
+            Glog.e("getWithParamUrl", "url = " + url
+                    + "\n key = " + key + "\n value = " + value);
         }
         Glog.d("getWithParamUrl", "url is " + url);
         return url;
@@ -370,15 +389,16 @@ public class NetUtils {
         return OkHttpFactory.getInstance().getSync(url, clazz);
     }
 
-    public static void postWithDialog(Activity activity, String message,
-                                      String function, @Nullable HashMap requestMap, NetCallback callback) {
+    public static void postWithDialog(
+            Activity activity, String message, String function, @Nullable HashMap requestMap,
+            NetCallback callback) {
         callback.functionName = function;
-        postWithDialog(activity, message,
-                function, addCommonFields(function, requestMap), callback);
+        postWithDialog(activity, message, function, getJsonStringData(requestMap), callback);
     }
 
-    private static void postWithDialog(Activity activity, String message,
-                                       String function, byte[] requestBody, NetCallback callback) {
+    private static void postWithDialog(
+            Activity activity, String message, String function, byte[] requestBody,
+            NetCallback callback) {
         if (TextUtils.isEmpty(message)) {
             message = "";
         }
@@ -394,7 +414,8 @@ public class NetUtils {
                 @Override
                 public void onCancel(DialogInterface dialog) {
                     if (!call.isCanceled()) {
-                        OkHttpFactory.getInstance().netClient.dispatcher().executorService().execute(new Runnable() {
+                        OkHttpFactory.getInstance().netClient.dispatcher()
+                                .executorService().execute(new Runnable() {
                             @Override
                             public void run() {
                                 call.cancel();
@@ -406,21 +427,7 @@ public class NetUtils {
         }
     }
 
-    private static byte[] addCommonFields(String function, HashMap jsonMap) {
-        byte[] result = null;
-        if (jsonMap == null) {
-            jsonMap = new HashMap();
-        }
-        try {
-            //result = JSONObject.toJSONString(jsonMap).getBytes("utf-8");
-            result = new JSONObject(jsonMap).toString().getBytes("utf-8");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return result;
-    }
-
-    private static byte[] addCommonMapFields(String function, Map jsonMap) {
+    private static byte[] getJsonStringData(Map jsonMap) {
         byte[] result = null;
         if (jsonMap == null) {
             jsonMap = new HashMap();
@@ -477,7 +484,8 @@ public class NetUtils {
             if (context == null) {
                 return resultArray[0];
             }
-            ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            ConnectivityManager connectivityManager =
+                    (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
             activeNetworkInfo = connectivityManager
                     .getActiveNetworkInfo();
         }
@@ -536,11 +544,10 @@ public class NetUtils {
             if (context == null) {
                 return false;
             }
-            ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo activeNetworkInfo = connectivityManager
-                    .getActiveNetworkInfo();
-            return activeNetworkInfo != null
-                    && activeNetworkInfo.isConnected();
+            ConnectivityManager connectivityManager =
+                    (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
         }
     }
 

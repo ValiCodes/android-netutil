@@ -118,7 +118,8 @@ public class StorageUtils {
      * @param dirName  目录名
      * @param fileName 文件名
      */
-    public static void saveDataToSDCard(Context context, String data, String dirName, String fileName) {
+    public static void saveDataToSDCard(
+            Context context, String data, String dirName, String fileName) {
         if (!verifyUnmountedSDCard()) {
             return;
         }

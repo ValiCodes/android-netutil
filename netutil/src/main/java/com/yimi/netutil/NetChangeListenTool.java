@@ -28,11 +28,15 @@ public class NetChangeListenTool {
 
     @SuppressLint("NewApi")
     public static void registerBroadcastReceiver(Context mContext) {
-        mConnectivityManager = (ConnectivityManager) mContext.getSystemService(CONNECTIVITY_SERVICE);
+        mConnectivityManager = (ConnectivityManager) mContext
+                .getSystemService(CONNECTIVITY_SERVICE);
         mNetworkInfo = new QiyiNetworkInfo();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {//5.0以上版本
-            NetworkRequest networkRequest = new NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR).addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
-            ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
+            NetworkRequest networkRequest = new NetworkRequest.Builder()
+                    .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
+            ConnectivityManager.NetworkCallback networkCallback
+                    = new ConnectivityManager.NetworkCallback() {
 
                 @Override
                 public void onAvailable(Network network) {
@@ -52,7 +56,8 @@ public class NetChangeListenTool {
                     postNetStatus(null);
                 }
             };
-            ConnectivityManager connectivityManager = (ConnectivityManager) mContext.getSystemService(CONNECTIVITY_SERVICE);
+            ConnectivityManager connectivityManager
+                    = (ConnectivityManager) mContext.getSystemService(CONNECTIVITY_SERVICE);
             connectivityManager.registerNetworkCallback(networkRequest, networkCallback);
         } else {
             IntentFilter filter = new IntentFilter();
@@ -96,7 +101,8 @@ public class NetChangeListenTool {
         public void onReceive(Context context, Intent intent) {
             if (intent.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
                 NetworkInfo info = mConnectivityManager.getActiveNetworkInfo();
-                Glog.d(TAG, "!----- 系统广播---网络切换" + "   " + (info == null ? "null" : info.toString()));
+                Glog.d(TAG, "!----- 系统广播---网络切换" + "   "
+                        + (info == null ? "null" : info.toString()));
                 postNetStatus(info);
             }
         }

@@ -144,7 +144,7 @@ public class Glog {
         }
     }
 
-    private static String getUnitedTags(String tag){
+    private static String getUnitedTags(String tag) {
         return TAG + "-" + tag;
     }
 }
