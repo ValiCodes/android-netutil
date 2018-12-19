@@ -4,7 +4,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 
-import com.google.gson.Gson;
 import com.yimi.netutil.progressdialog.QProgressDialog;
 
 import org.json.JSONObject;
@@ -90,7 +89,7 @@ public abstract class NetCallback<T> implements Callback {
                 handleException(response.code(), ServerConnect.getHttpError(response.code()));
             }
         } catch (final Exception e) {
-            //数据解析异常
+            // 数据解析异常
             if (e instanceof CertificateException)
                 handleException(response.code(), "数字证书异常，请联系客服人员!");
             else
@@ -144,33 +143,14 @@ public abstract class NetCallback<T> implements Callback {
         });
     }
 
-
     public <T> T manageResponse(
             boolean isMtp, Call request, Response response,
             Class<T> entityClass, String functionName) throws Exception {
         T resObj = null;
         OkHttpFactory.checkResponseCertificate(isMtp, response);
         mResponse = response.body().string();
-        String resString = mResponse;
-        if (entityClass.equals(JSONObject.class)) {
-            //org.json
-            resObj = (T) new JSONObject(resString);
-        } else if (entityClass.equals(String.class)) {
-            //不处理String对象
-            resObj = (T) resString;
-        } else {
-            //Gson
-            long t1 = System.currentTimeMillis();
-            //resObj = JSON.parseObject(resString, entityClass);
-            resObj = new Gson().fromJson(resString, entityClass);
-            Glog.d(TAG, "fastjsondecodetime function:" + functionName
-                    + "  time:" + (System.currentTimeMillis() - t1));
-        }
 
-        //数据解析为null报数据解析异常
-        if (resObj == null) {
-            throw new Exception();
-        }
+        resObj = Utils.transformResponseObj(mResponse, entityClass, functionName);
 
         OkHttpFactory.updateMtpCookie(isMtp, response);
         return resObj;

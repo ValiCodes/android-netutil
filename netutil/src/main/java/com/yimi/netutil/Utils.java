@@ -1,5 +1,7 @@
 package com.yimi.netutil;
 
+import android.support.annotation.Nullable;
+
 import com.google.gson.Gson;
 
 import org.json.JSONObject;
@@ -58,5 +60,38 @@ public class Utils {
             e.printStackTrace();
         }
         return result;
+    }
+
+    /**
+     * @param responseStr
+     * @param clazz support clazz type: `String`, `JSONObject`, and java bean.
+     * @param functionName
+     * @param <T>
+     * @return
+     * @throws Exception 上报数据解析异常
+     */
+    public static <T> T transformResponseObj(
+            String responseStr, Class<T> clazz, @Nullable String functionName) throws Exception {
+        T resObj = null;
+        if (clazz.equals(JSONObject.class)) {
+            resObj = (T) new JSONObject(responseStr);
+        } else if (clazz.equals(String.class)) {
+            // 不处理String对象
+            resObj = (T) responseStr;
+        } else {
+            // Gson
+            long t1 = System.currentTimeMillis();
+            //resObj = JSON.parseObject(resString, clazz);
+            resObj = new Gson().fromJson(responseStr, clazz);
+            Glog.d(TAG, "parse json function: " + functionName
+                    + ", time:" + (System.currentTimeMillis() - t1));
+        }
+
+        // 数据解析为null, 上报数据解析异常
+        if (resObj == null) {
+            throw new Exception();
+        }
+
+        return resObj;
     }
 }

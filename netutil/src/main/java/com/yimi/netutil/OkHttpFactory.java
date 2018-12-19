@@ -9,7 +9,6 @@ import android.text.TextUtils;
 
 import com.facebook.stetho.Stetho;
 import com.facebook.stetho.okhttp3.StethoInterceptor;
-import com.google.gson.Gson;
 
 import org.json.JSONObject;
 
@@ -59,8 +58,8 @@ public class OkHttpFactory {
     public @interface PostDataType {
     }
 
-    public OkHttpClient netClient;
-    public OkHttpClient cmsClient;
+    public OkHttpClient netClient; // post
+    public OkHttpClient cmsClient; // get
 
     private static volatile OkHttpFactory okhttpUtils;
 
@@ -409,10 +408,10 @@ public class OkHttpFactory {
             Call call = okHttpClient.newCall(request.build());
             Response response = call.execute();
             //byte[] bytes = response.body().bytes();
-            resObj = new Gson().fromJson(response.body().string(), clazz);
+            resObj = Utils.transformResponseObj(response.body().string(), clazz, function);
             return resObj;
         } catch (Exception e) {
-            Glog.e(TAG, "okhttp postSync error:" + e.getMessage());
+            Glog.e(TAG, "okhttp postSync error", e);
         }
         return null;
     }
@@ -448,16 +447,15 @@ public class OkHttpFactory {
 
     public <T> T getSync(String url, Class<T> clazz) {
         OkHttpClient okHttpClient = OkHttpFactory.getInstance().cmsClient;
-        Request.Builder request = new Request.Builder()
-                .url(url).get();
+        Request.Builder request = new Request.Builder().url(url).get();
         request.addHeader("Cache-Control", "public, max-age=" + 0);
         try {
             Response response = okHttpClient.newCall(request.build()).execute();
             //final T resObj = com.alibaba.fastjson.JSON.parseObject(response.body().string(), clazz);
-            final T resObj = new Gson().fromJson(response.body().string(), clazz);
+            final T resObj = Utils.transformResponseObj(response.body().string(), clazz, url);
             return resObj;
         } catch (Exception e) {
-            Glog.e(TAG, "okhttp getSync error:" + e.getMessage());
+            Glog.e(TAG, "okhttp getSync error", e);
         }
         return null;
     }
