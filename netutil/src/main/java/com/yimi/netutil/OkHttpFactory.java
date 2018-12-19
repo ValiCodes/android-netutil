@@ -11,13 +11,13 @@ import com.facebook.stetho.Stetho;
 import com.facebook.stetho.okhttp3.StethoInterceptor;
 import com.google.gson.Gson;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -113,6 +113,17 @@ public class OkHttpFactory {
         return okHttpClientBuilder;
     }
 
+    /**
+     * @param params recommend: {@code Map<String, Object>}
+     *               <p>
+     *               Supported Value Object: `null`, `NULL`, `String`,
+     *               instanceof `JSONArray`, instanceof `JSONObject`,
+     *               instanceof primitive wrapper type (`Boolean`, `Byte`, `Character`...),
+     *               and the instanceof `Map` or `Collection` of those.
+     *               Otherwise if the object is from a {@code java} package,
+     *               use the result of {@code toString}.
+     *               <P>Refs implementation: {@link JSONObject#wrap}
+     */
     public static Request.Builder getJsonDataRequest(
             String function, Map params, Request.Builder request) {
         request.post(RequestBody.create(JSON, Utils.getJsonStringData(params)));
@@ -121,15 +132,30 @@ public class OkHttpFactory {
         return request;
     }
 
+    /**
+     * @param params {@code Map<key, value>}
+     *               <P>transform the key/value to String internally by `String.valueOf()`
+     */
     public static Request.Builder getFormDataRequest(
-            String function, Map requestBody, Request.Builder request) {
+            String function, Map params, Request.Builder request) {
         FormBody.Builder formBodyBuilder = new FormBody.Builder();
-        if (requestBody != null && requestBody.size() > 0) {
-            for (Iterator iterator = requestBody.entrySet().iterator(); iterator.hasNext(); ) {
-                Map.Entry<String, String> entry = (Map.Entry) iterator.next();
-                formBodyBuilder.add(entry.getKey(), entry.getValue());
+
+        if (params != null && params.size() > 0) {
+            String key, value;
+            Map<?, ?> contentsTyped = (Map<?, ?>) params;
+            for (Map.Entry<?, ?> entry : contentsTyped.entrySet()) {
+                key = String.valueOf(entry.getKey());
+                if (key == null) {
+                    continue;
+                }
+                value = String.valueOf(entry.getValue());
+                if (value == null) {
+                    continue;
+                }
+                formBodyBuilder.add(key, value);
             }
         }
+
         FormBody formBody = formBodyBuilder.build();
         request.post(formBody);
         addHttpHeaders(request, function);
@@ -144,13 +170,14 @@ public class OkHttpFactory {
      * @param fileKey
      * @param file
      * @param fileContentType such as: "image/*", "image/jpeg", "image/png"
-     * @param params
+     * @param params          {@code Map<key, value>},
+     *                        transform the key/value to String internally by `String.valueOf()`
      * @param request
      * @return
      */
     public static Request.Builder getMultiPortRequest(
             String function, String fileKey, File file, String fileContentType,
-            HashMap<String, String> params, Request.Builder request) {
+            Map params, Request.Builder request) {
         MultipartBody.Builder multiRequestBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM);
 
@@ -162,9 +189,18 @@ public class OkHttpFactory {
         }
 
         if (params != null) {
-            for (HashMap.Entry<String, String> entry : params.entrySet()) {
-                multiRequestBody.addFormDataPart(
-                        Utils.notNull(entry.getKey()), Utils.notNull(entry.getValue()));
+            String key, value;
+            Map<?, ?> contentsTyped = (Map<?, ?>) params;
+            for (Map.Entry<?, ?> entry : contentsTyped.entrySet()) {
+                key = String.valueOf(entry.getKey());
+                if (key == null) {
+                    continue;
+                }
+                value = String.valueOf(entry.getValue());
+                if (value == null) {
+                    continue;
+                }
+                multiRequestBody.addFormDataPart(key, value);
             }
         }
 
@@ -202,8 +238,19 @@ public class OkHttpFactory {
         }
     }
 
-    private Call doAsyncRequest(
-            String function, Request.Builder request, Map params, NetCallback callback) {
+    /**
+     * @param params recommend: {@code Map<String, Object>}
+     *               <p>
+     *               Supported Value Object: `null`, `NULL`, `String`,
+     *               instanceof `JSONArray`, instanceof `JSONObject`,
+     *               instanceof primitive wrapper type (`Boolean`, `Byte`, `Character`...),
+     *               and the instanceof `Map` or `Collection` of those.
+     *               Otherwise if the object is from a {@code java} package,
+     *               use the result of {@code toString}.
+     *               <P>Refs implementation: {@link JSONObject#wrap}
+     */
+    private Call doAsyncRequestWithJsonData(String function, Request.Builder request,
+                                            Map params, NetCallback callback) {
         final OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
         request = getJsonDataRequest(function, params, request);
         Call call = okHttpClient.newCall(request.build());
@@ -212,10 +259,14 @@ public class OkHttpFactory {
         return call;
     }
 
+    /**
+     * @param params {@code Map<key, value>}
+     *               <P>transform the key/value to String internally by `String.valueOf()`
+     */
     private Call doAsyncRequestWithFormData(
-            String function, Request.Builder request, Map requestBody, NetCallback callback) {
+            String function, Request.Builder request, Map params, NetCallback callback) {
         final OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
-        request = getFormDataRequest(function, requestBody, request);
+        request = getFormDataRequest(function, params, request);
         Call call = okHttpClient.newCall(request.build());
         call.enqueue(callback);
         retryCallBack(call, okHttpClient, callback);
@@ -228,43 +279,82 @@ public class OkHttpFactory {
      * @param file
      * @param fileContentType such as: "image/*", "image/jpeg", "image/png"
      * @param request
-     * @param params
+     * @param params          {@code Map<key, value>},
+     *                        transform the key/value to String internally by `String.valueOf()`
      * @param callback
      * @return
      */
     private Call doAsyncPostFileWithFormData(
             String url, String fileKey, File file, String fileContentType, Request.Builder request,
-            HashMap<String, String> params, NetCallback callback) {
+            Map params, NetCallback callback) {
         final OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
-        request = getMultiPortRequest(
-                url, fileKey, file, fileContentType, params, request);
+        request = getMultiPortRequest(url, fileKey, file, fileContentType, params, request);
         Call call = okHttpClient.newCall(request.build());
         call.enqueue(callback);
         retryCallBack(call, okHttpClient, callback);
         return call;
     }
 
-    public Call postAsync(String function, Map params, final NetCallback callback) {
+    /**
+     * @param params recommend: {@code Map<String, Object>}
+     *               <p>
+     *               Supported Value Object: `null`, `NULL`, `String`,
+     *               instanceof `JSONArray`, instanceof `JSONObject`,
+     *               instanceof primitive wrapper type (`Boolean`, `Byte`, `Character`...),
+     *               and the instanceof `Map` or `Collection` of those.
+     *               Otherwise if the object is from a {@code java} package,
+     *               use the result of {@code toString}.
+     *               <P>Refs implementation: {@link JSONObject#wrap}
+     */
+    public Call postAsyncWithJsonData(
+            String function, Map params, final NetCallback callback) {
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(function));
-        return doAsyncRequest(function, request, params, callback);
+        return doAsyncRequestWithJsonData(function, request, params, callback);
     }
 
-    public Call postAsync(String function, Map params, Map<String, String> headers,
-                          final NetCallback callback) {
+    /**
+     * @param params recommend: {@code Map<String, Object>}
+     *               <p>
+     *               Supported Value Object: `null`, `NULL`, `String`,
+     *               instanceof `JSONArray`, instanceof `JSONObject`,
+     *               instanceof primitive wrapper type (`Boolean`, `Byte`, `Character`...),
+     *               and the instanceof `Map` or `Collection` of those.
+     *               Otherwise if the object is from a {@code java} package,
+     *               use the result of {@code toString}.
+     *               <P>Refs implementation: {@link JSONObject#wrap}
+     */
+    public Call postAsyncWithJsonData(
+            String function, Map params, Map<String, String> headers,
+            final NetCallback callback) {
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(function));
         // add headers
         addHeaders(request, headers);
-        return doAsyncRequest(function, request, params, callback);
+        return doAsyncRequestWithJsonData(function, request, params, callback);
     }
 
-    public Call postAsyncWithFormData(String function, Map map, final NetCallback callback) {
+    /**
+     * @param function
+     * @param params   {@code Map<key, value>},
+     *                 transform the key/value to String internally by `String.valueOf()`
+     * @param callback
+     * @return
+     */
+    public Call postAsyncWithFormData(String function, Map params, final NetCallback callback) {
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(function));
-        return doAsyncRequestWithFormData(function, request, map, callback);
+        return doAsyncRequestWithFormData(function, request, params, callback);
     }
 
+    /**
+     * @param function
+     * @param params   {@code Map<key, value>},
+     *                 transform the key/value to String internally by `String.valueOf()`
+     * @param headers
+     * @param callback
+     * @return
+     */
     public Call postAsyncWithFormData(
             String function, Map params, Map<String, String> headers, final NetCallback callback) {
         Request.Builder request = new Request.Builder()
@@ -279,14 +369,15 @@ public class OkHttpFactory {
      * @param fileKey
      * @param file
      * @param fileContentType such as: "image/*", "image/jpeg", "image/png"
-     * @param params
+     * @param params          {@code Map<key, value>},
+     *                        transform the key/value to String internally by `String.valueOf()`
      * @param headers
      * @param callback
      * @return
      */
     public Call postFileAsyncWithFormData(
             String url, String fileKey, File file, String fileContentType,
-            @Nullable HashMap<String, String> params,
+            @Nullable Map params,
             @Nullable Map<String, String> headers, final NetCallback callback) {
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(url));
@@ -296,8 +387,7 @@ public class OkHttpFactory {
                 url, fileKey, file, fileContentType, request, params, callback);
     }
 
-    public <T> T postSync(
-            String function, Map params, Class<T> clazz, @PostDataType int dataType) {
+    public <T> T postSync(String function, Map params, Class<T> clazz, @PostDataType int dataType) {
         OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(function));

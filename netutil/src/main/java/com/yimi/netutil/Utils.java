@@ -34,10 +34,22 @@ public class Utils {
         return string;
     }
 
+
+    /**
+     * @param jsonMap recommend: {@code Map<String, Object>}
+     *                <p>
+     *                Supported Value Object: `null`, `NULL`, `String`,
+     *                instanceof `JSONArray`, instanceof `JSONObject`,
+     *                instanceof primitive wrapper type (`Boolean`, `Byte`, `Character`...),
+     *                and the instanceof `Map` or `Collection` of those.
+     *                Otherwise if the object is from a {@code java} package,
+     *                use the result of {@code toString}.
+     *                <P>Refs implementation: {@link JSONObject#wrap}
+     */
     public static byte[] getJsonStringData(Map jsonMap) {
         byte[] result = null;
         if (jsonMap == null) {
-            jsonMap = new HashMap();
+            jsonMap = new HashMap<String, Object>();
         }
         try {
             //result = JSONObject.toJSONString(jsonMap).getBytes("utf-8");

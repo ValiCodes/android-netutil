@@ -14,6 +14,8 @@ import android.view.KeyEvent;
 
 import com.yimi.netutil.progressdialog.QProgressDialog;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.net.URL;
@@ -63,29 +65,67 @@ public class NetUtils {
         return map.containsKey(url);
     }
 
-    public static Call post(String function, @Nullable Map params, NetCallback callback) {
+    /**
+     * @param params recommend: {@code Map<String, Object>}
+     *               <p>
+     *               Supported Value Object: `null`, `NULL`, `String`,
+     *               instanceof `JSONArray`, instanceof `JSONObject`,
+     *               instanceof primitive wrapper type (`Boolean`, `Byte`, `Character`...),
+     *               and the instanceof `Map` or `Collection` of those.
+     *               Otherwise if the object is from a {@code java} package,
+     *               use the result of {@code toString}.
+     *               <P>Refs implementation: {@link JSONObject#wrap}
+     */
+    public static Call postWithJsonData(
+            String function, @Nullable Map params, NetCallback callback) {
         callback.functionName = function;
-        return OkHttpFactory.getInstance().postAsync(function, params, callback);
+        return OkHttpFactory.getInstance().postAsyncWithJsonData(function, params, callback);
     }
 
-    public static Call post(
+    /**
+     * @param params recommend: {@code Map<String, Object>}
+     *               <p>
+     *               Supported Value Object: `null`, `NULL`, `String`,
+     *               instanceof `JSONArray`, instanceof `JSONObject`,
+     *               instanceof primitive wrapper type (`Boolean`, `Byte`, `Character`...),
+     *               and the instanceof `Map` or `Collection` of those.
+     *               Otherwise if the object is from a {@code java} package,
+     *               use the result of {@code toString}.
+     *               <P>Refs implementation: {@link JSONObject#wrap}
+     */
+    public static Call postWithJsonData(
             String function, @Nullable Map params,
             Map<String, String> headers, NetCallback callback) {
         callback.functionName = function;
-        return OkHttpFactory.getInstance().postAsync(function, params, headers, callback);
+        return OkHttpFactory.getInstance().postAsyncWithJsonData(function, params, headers, callback);
     }
 
+    /**
+     * @param function
+     * @param params   {@code Map<key, value>},
+     *                 transform the key/value to String internally by `String.valueOf()`
+     * @param callback
+     * @return
+     */
     public static Call postWithFormData(
-            String function, @Nullable Map requestMap, NetCallback callback) {
+            String function, @Nullable Map params, NetCallback callback) {
         callback.functionName = function;
-        return OkHttpFactory.getInstance().postAsyncWithFormData(function, requestMap, callback);
+        return OkHttpFactory.getInstance().postAsyncWithFormData(function, params, callback);
     }
 
-    public static Call postWithFormData(String function, @Nullable Map requestMap,
+    /**
+     * @param function
+     * @param params   {@code Map<key, value>},
+     *                 transform the key/value to String internally by `String.valueOf()`
+     * @param headers
+     * @param callback
+     * @return
+     */
+    public static Call postWithFormData(String function, @Nullable Map params,
                                         Map<String, String> headers, NetCallback callback) {
         callback.functionName = function;
         return OkHttpFactory.getInstance()
-                .postAsyncWithFormData(function, requestMap, headers, callback);
+                .postAsyncWithFormData(function, params, headers, callback);
     }
 
     /**
@@ -93,15 +133,15 @@ public class NetUtils {
      * @param fileKey
      * @param file
      * @param fileContentType such as: "image/*", "image/jpeg", "image/png"
-     * @param params
+     * @param params          {@code Map<key, value>},
+     *                        transform the key/value to String internally by `String.valueOf()`
      * @param headers
      * @param callback
      * @return
      */
     public static Call postFileWithFormData(
             String url, String fileKey, File file, String fileContentType,
-            @Nullable HashMap<String, String> params,
-            Map<String, String> headers, NetCallback callback) {
+            @Nullable Map params, Map<String, String> headers, NetCallback callback) {
         return OkHttpFactory.getInstance().postFileAsyncWithFormData(
                 url, fileKey, file, fileContentType, params, headers, callback);
     }
@@ -147,17 +187,28 @@ public class NetUtils {
     /**
      * 调用网络请求的同步方法，不能在主线程使用
      *
-     * @param function
-     * @param params
+     * @param params recommend: {@code Map<String, Object>}
+     *               <p>
+     *               Supported Value Object: `null`, `NULL`, `String`,
+     *               instanceof `JSONArray`, instanceof `JSONObject`,
+     *               instanceof primitive wrapper type (`Boolean`, `Byte`, `Character`...),
+     *               and the instanceof `Map` or `Collection` of those.
+     *               Otherwise if the object is from a {@code java} package,
+     *               use the result of {@code toString}.
+     *               <P>Refs implementation: {@link JSONObject#wrap}
      */
     public static <T> T postSyncWithJsonData(
-            String function, @Nullable HashMap params, Class<T> clazz) {
+            String function, @Nullable Map params, Class<T> clazz) {
         return OkHttpFactory.getInstance().postSync(
                 function, params, clazz, OkHttpFactory.POST_DATA_TYPE_JSON);
     }
 
+    /**
+     * @param params {@code Map<key, value>}
+     *               <P>transform the key/value to String internally by `String.valueOf()`
+     */
     public static <T> T postSyncWithFormData(
-            String function, @Nullable HashMap params, Class<T> clazz) {
+            String function, @Nullable Map params, Class<T> clazz) {
         return OkHttpFactory.getInstance().postSync(
                 function, params, clazz, OkHttpFactory.POST_DATA_TYPE_FORM);
     }
@@ -383,8 +434,19 @@ public class NetUtils {
         return OkHttpFactory.getInstance().getSync(url, clazz);
     }
 
-    private static void postWithDialog(
-            Activity activity, String message, String function, HashMap requestMap,
+    /**
+     * @param params recommend: {@code Map<String, Object>}
+     *               <p>
+     *               Supported Value Object: `null`, `NULL`, `String`,
+     *               instanceof `JSONArray`, instanceof `JSONObject`,
+     *               instanceof primitive wrapper type (`Boolean`, `Byte`, `Character`...),
+     *               and the instanceof `Map` or `Collection` of those.
+     *               Otherwise if the object is from a {@code java} package,
+     *               use the result of {@code toString}.
+     *               <P>Refs implementation: {@link JSONObject#wrap}
+     */
+    private static void postJsonDataWithDialog(
+            Activity activity, String message, String function, Map params,
             NetCallback callback) {
         callback.functionName = function;
         if (TextUtils.isEmpty(message)) {
@@ -396,7 +458,7 @@ public class NetUtils {
             dialog = getLoadingDialog(activity, message);
             callback.loadingDialog = dialog;
         }
-        final Call call = post(function, requestMap, callback);
+        final Call call = postWithJsonData(function, params, callback);
         if (dialog != null) {
             dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
                 @Override
@@ -461,8 +523,9 @@ public class NetUtils {
             }
             ConnectivityManager connectivityManager =
                     (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-            activeNetworkInfo = connectivityManager
-                    .getActiveNetworkInfo();
+            if (connectivityManager != null) {
+                activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            }
         }
         boolean isAvailable = activeNetworkInfo != null
                 && activeNetworkInfo.isConnected();
@@ -521,7 +584,10 @@ public class NetUtils {
             }
             ConnectivityManager connectivityManager =
                     (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            NetworkInfo activeNetworkInfo = null;
+            if (connectivityManager != null) {
+                activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+            }
             return activeNetworkInfo != null && activeNetworkInfo.isConnected();
         }
     }
