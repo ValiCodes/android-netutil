@@ -129,6 +129,21 @@ public class NetUtils {
     }
 
     /**
+     * @param function
+     * @param params   {@code Map<key, value>},
+     *                 transform the key/value to String internally by `String.valueOf()`
+     * @param timeOutInSeconds
+     * @param callback
+     * @return
+     */
+    public static Call postWithFormData(
+            String function, @Nullable Map params, int timeOutInSeconds, NetCallback callback) {
+        callback.functionName = function;
+        return OkHttpFactory.getInstance().postAsyncWithFormData(
+                function, params, timeOutInSeconds, callback);
+    }
+
+    /**
      * @param url
      * @param fileKey
      * @param file

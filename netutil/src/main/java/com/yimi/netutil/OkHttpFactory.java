@@ -57,9 +57,14 @@ public class OkHttpFactory {
     @Retention(RetentionPolicy.SOURCE)
     public @interface PostDataType {
     }
-
-    public OkHttpClient netClient; // post
-    public OkHttpClient cmsClient; // get
+    /**
+     * post
+     */
+    public OkHttpClient netClient;
+    /**
+     * get
+     */
+    public OkHttpClient cmsClient;
 
     private static volatile OkHttpFactory okhttpUtils;
 
@@ -82,7 +87,7 @@ public class OkHttpFactory {
                     .enableWebKitInspector(Stetho.defaultInspectorModulesProvider(context))
                     .build());
         }
-        OkHttpClient.Builder netBuilder = getOkHttpBuilder();
+        OkHttpClient.Builder netBuilder = getOkHttpBuilder(DEFAULT_TIMEOUT);
         // TODO: 2017/12/15  
         //验证证书指纹锁定,绑定host
         //netBuilder.certificatePinner(new CertificatePinner.Builder().add(host,pin).build());
@@ -91,12 +96,24 @@ public class OkHttpFactory {
         cmsClient = netBuilder.build();
     }
 
-    private OkHttpClient.Builder getOkHttpBuilder() {
+    /**
+     * 仅用于自定义 timeOut 时间
+     * <p>
+     * todo: 优化：这里应该将返回的 client 加入 List 中，并在 {@link NetUtils#cancelAll()} 中调用cancelAll.
+     *
+     * @param timeOutInSeconds
+     * @return
+     */
+    private OkHttpClient getPostHttpClient(final int timeOutInSeconds) {
+        return getOkHttpBuilder(timeOutInSeconds).build();
+    }
+
+    private @NonNull OkHttpClient.Builder getOkHttpBuilder(final int timeOutInSeconds) {
         OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient.Builder();
         if (NetUtils.isDebug()) {
-            okHttpClientBuilder.connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
-                    .writeTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
-                    .readTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS);
+            okHttpClientBuilder.connectTimeout(timeOutInSeconds, TimeUnit.SECONDS)
+                    .writeTimeout(timeOutInSeconds, TimeUnit.SECONDS)
+                    .readTimeout(timeOutInSeconds, TimeUnit.SECONDS);
             okHttpClientBuilder.addNetworkInterceptor(new StethoInterceptor());
             okHttpClientBuilder.hostnameVerifier(new HostnameVerifier() {
                 @Override
@@ -105,9 +122,9 @@ public class OkHttpFactory {
                 }
             });
         } else {
-            okHttpClientBuilder.connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
-                    .writeTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
-                    .readTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS);
+            okHttpClientBuilder.connectTimeout(timeOutInSeconds, TimeUnit.SECONDS)
+                    .writeTimeout(timeOutInSeconds, TimeUnit.SECONDS)
+                    .readTimeout(timeOutInSeconds, TimeUnit.SECONDS);
         }
         return okHttpClientBuilder;
     }
@@ -263,8 +280,8 @@ public class OkHttpFactory {
      *               <P>transform the key/value to String internally by `String.valueOf()`
      */
     private Call doAsyncRequestWithFormData(
+            @NonNull final OkHttpClient okHttpClient,
             String function, Request.Builder request, Map params, NetCallback callback) {
-        final OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
         request = getFormDataRequest(function, params, request);
         Call call = okHttpClient.newCall(request.build());
         call.enqueue(callback);
@@ -343,7 +360,24 @@ public class OkHttpFactory {
     public Call postAsyncWithFormData(String function, Map params, final NetCallback callback) {
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(function));
-        return doAsyncRequestWithFormData(function, request, params, callback);
+        return doAsyncRequestWithFormData(OkHttpFactory.getInstance().netClient,
+                function, request, params, callback);
+    }
+
+    /**
+     * @param function
+     * @param params   {@code Map<key, value>},
+     *                 transform the key/value to String internally by `String.valueOf()`
+     * @param timeOutInSeconds
+     * @param callback
+     * @return
+     */
+    public Call postAsyncWithFormData(
+            String function, Map params, final int timeOutInSeconds, final NetCallback callback) {
+        Request.Builder request = new Request.Builder()
+                .url(ServerConnect.getInstance().getUrl(function));
+        return doAsyncRequestWithFormData(getPostHttpClient(timeOutInSeconds),
+                function, request, params, callback);
     }
 
     /**
@@ -360,7 +394,8 @@ public class OkHttpFactory {
                 .url(ServerConnect.getInstance().getUrl(function));
         // add headers
         addHeaders(request, headers);
-        return doAsyncRequestWithFormData(function, request, params, callback);
+        return doAsyncRequestWithFormData(OkHttpFactory.getInstance().netClient,
+                function, request, params, callback);
     }
 
     /**
