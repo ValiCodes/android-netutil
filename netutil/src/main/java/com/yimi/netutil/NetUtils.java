@@ -155,10 +155,10 @@ public class NetUtils {
      * @return
      */
     public static Call postFileWithFormData(
-            String url, String fileKey, File file, String fileContentType,
-            @Nullable Map params, Map<String, String> headers, NetCallback callback) {
+            String url, String fileKey, File file, String fileContentType, @Nullable Map params,
+            Map<String, String> headers, int timeOutInSeconds, NetCallback callback) {
         return OkHttpFactory.getInstance().postFileAsyncWithFormData(
-                url, fileKey, file, fileContentType, params, headers, callback);
+                url, fileKey, file, fileContentType, params, headers, timeOutInSeconds, callback);
     }
 
     public static void postFile(File file, NetCallback callback) {

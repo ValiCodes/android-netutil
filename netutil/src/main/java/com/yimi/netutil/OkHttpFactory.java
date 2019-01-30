@@ -300,10 +300,9 @@ public class OkHttpFactory {
      * @param callback
      * @return
      */
-    private Call doAsyncPostFileWithFormData(
+    private Call doAsyncPostFileWithFormData(@NonNull final OkHttpClient okHttpClient,
             String url, String fileKey, File file, String fileContentType, Request.Builder request,
             Map params, NetCallback callback) {
-        final OkHttpClient okHttpClient = OkHttpFactory.getInstance().netClient;
         request = getMultiPortRequest(url, fileKey, file, fileContentType, params, request);
         Call call = okHttpClient.newCall(request.build());
         call.enqueue(callback);
@@ -411,13 +410,13 @@ public class OkHttpFactory {
      */
     public Call postFileAsyncWithFormData(
             String url, String fileKey, File file, String fileContentType,
-            @Nullable Map params,
-            @Nullable Map<String, String> headers, final NetCallback callback) {
+            @Nullable Map params, @Nullable Map<String, String> headers, final int timeOutInSeconds,
+            final NetCallback callback) {
         Request.Builder request = new Request.Builder()
                 .url(ServerConnect.getInstance().getUrl(url));
         // add headers
         addHeaders(request, headers);
-        return doAsyncPostFileWithFormData(
+        return doAsyncPostFileWithFormData(getPostHttpClient(timeOutInSeconds),
                 url, fileKey, file, fileContentType, request, params, callback);
     }
 
