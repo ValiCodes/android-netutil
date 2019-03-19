@@ -23,8 +23,7 @@ public class NetChangeListenTool {
     private static ConnectivityManager mConnectivityManager;// 监听网络
     private static NetChangeReceiver netChangeReceiver;
     private static QiyiNetworkInfo mNetworkInfo;
-    private static QiyiNetworkInfo qiyiNetworkInfo; // 上一次网络状态
-
+    private static QiyiNetworkInfo lastNetworkInfo;
 
     @SuppressLint("NewApi")
     public static void registerBroadcastReceiver(Context mContext) {
@@ -76,8 +75,8 @@ public class NetChangeListenTool {
     public static void postNetStatus(NetworkInfo networkInfo) {
         mNetworkInfo.update(networkInfo);
         if (networkInfo != null) {
-            if (!mNetworkInfo.equals(qiyiNetworkInfo)) {
-                qiyiNetworkInfo = mNetworkInfo;
+            if (!mNetworkInfo.equals(lastNetworkInfo)) {
+                lastNetworkInfo = mNetworkInfo;
                 if (networkInfo.isAvailable()) {
                     Glog.d(TAG, "!----- 网络切换 -----");
                 }
