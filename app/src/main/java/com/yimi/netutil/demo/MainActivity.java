@@ -128,4 +128,16 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // test `getNetInfoMsg`
+        NetInfoUtilsTest.registerReceiver(this);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        NetInfoUtilsTest.unregisterReceiver(this);
+    }
 }
